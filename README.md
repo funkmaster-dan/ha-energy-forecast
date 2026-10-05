@@ -2,14 +2,14 @@
 
 A HACS custom integration for the [Energy Forecast service](https://github.com/funkmaster-dan/energy-forecast). It forwards selected measured inputs and Recorder history, polls one atomic forecast snapshot, and publishes advisory sensors. Forecasting/training runs outside HA. **No battery controls are provided.**
 
-The service's 0.1.0 alpha keeps discretionary export authorization disabled pending source/parameter/tail validation. Forecast totals and shadow diagnostics are still useful. See the service's [delivery status](https://github.com/funkmaster-dan/energy-forecast/blob/main/docs/status.md).
+The service's 0.2.0 alpha keeps discretionary export authorization disabled pending source/parameter/tail validation. Forecast totals and shadow diagnostics are still useful. See the service's [delivery status](https://github.com/funkmaster-dan/energy-forecast/blob/main/docs/status.md).
 
 ## Installation and pairing
 
 1. In HACS → Custom repositories, add `https://github.com/funkmaster-dan/ha-energy-forecast` as type **Integration**. Download the alpha release and restart HA.
-2. Complete site/battery/tariff/source configuration in the service GUI and create an **integration** token.
-3. In HA → Settings → Devices & services → Add integration, select **Energy Forecast**. Enter the service's reachable HTTP(S) origin, token and site ID `home`.
-4. Open integration options to select input sources and history. The optional discovery form includes current sensors and inactive Recorder statistic IDs. Advanced JSON can express multiple aliases/disjoint inputs.
+2. Open **Setup** in the service GUI. Connect to HA with its URL and a long-lived access token; this imports home location and eligible sensor metadata and starts pairing automatically.
+3. If automatic pairing is unavailable, add **Energy Forecast** under HA → Settings → Devices & services using the service URL, integration token shown in Setup, and site ID `home`.
+4. Select household, bank generation and battery SoC sensors in the service GUI. The bridge picks up these selections and publishes current sensors plus inactive Recorder IDs. Integration options control history and output settings through ordinary fields.
 
 The HA machine cannot use the service host's `127.0.0.1` address. Use a trusted reachable LAN URL or HTTPS reverse proxy. Tokens are stored in the HA config entry and redacted from diagnostics. Reauthentication accepts a replacement token; unloading cancels forwarding/output timers, and options edits reload the entry.
 
@@ -17,18 +17,7 @@ Tested in an isolated HA Core **2026.9.4** runtime. The actual household instanc
 
 ## Source mappings
 
-Example options JSON:
-
-```json
-[
-  {"source":"sensor.household_load", "feature":"household_load", "unit":"W", "kind":"mean_power", "boundary":"AC", "epoch":"meter-v1", "history":true, "history_period":"hour"},
-  {"source":"sensor.pv_ac", "feature":"pv_generation", "unit":"W", "kind":"mean_power", "boundary":"AC", "epoch":"pv-v1", "history":true},
-  {"source":"sensor.battery_soc", "feature":"battery_soc", "unit":"%", "kind":"state", "boundary":"stored", "epoch":"battery-v1", "history":false}
-]
-```
-
-`source` is the entity/statistic ID configured in the service profile. An optional `entity_id` can provide the live entity for an inactive/alternate statistic mapping. Units and boundaries must be verified; gross household load excludes battery charging. DC PV is converted explicitly by the service mapping. Do not map vendor percentage capacity as kWh.
-
+Configure selected sensors and stitch/sum/derived composition in the service's forms. No JSON editing is needed. The service owns source selections; existing local selections remain a fallback until service selections are saved. Verify units and boundaries; gross household load excludes battery charging. Unknown/DC bank generation can calibrate the bank model but cannot be treated as verified AC household supply.
 Kinds: `mean_power` (W/kW), `counter` (Wh/kWh cumulative), `interval_energy` (Wh/kWh, requires actual `interval_seconds`) or `state` (SoC/temperature/limits). Change `epoch` when a meter, sign, unit or boundary changes. Missing/unavailable/nonfinite state is forwarded as invalid/null, never zero. Historical statistics are marked separately from live readings and cannot freshen SoC/limits. Closed-hour backfill keeps a completion lag, and statistics revisions supersede overlapping live interval samples without deleting them. Source `last_reported` is retained for state freshness; repeatedly polling an old SoC does not make it fresh.
 
 Historical periods: `hour` long-term statistics, `5minute` short-term statistics, or bounded `raw` Recorder state history. Recorder reset-aware `change` is forwarded as interval energy; mean metadata does not depend on deprecated `has_mean`. Raw integration is gap-limited and does not claim coverage across a long unchanged interval. The bridge performs one bounded source/day page per input tick, persists a pending batch before transmission, and advances its checkpoint only after acknowledgement. Inactive statistic IDs can be selected manually or through discovery.

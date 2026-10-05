@@ -31,9 +31,8 @@
     "step": {
       "init": {
         "title": "Select input sources and history",
-        "description": "Use the documented JSON mapping format, including explicit units, boundary and source epoch. Inactive statistic IDs are supported. Guide: {guide}",
+        "description": "Select sensors and composition in the Energy Forecast service setup. This screen controls history backfill and can discover an additional source. Guide: {guide}",
         "data": {
-          "inputs": "Selected inputs (JSON)",
           "history_start": "History start (YYYY-MM-DD)",
           "enable_backfill": "Backfill selected history",
           "add_source": "Discover and add another source"
@@ -56,7 +55,7 @@
       }
     },
     "error": {
-      "invalid_inputs": "Invalid mapping JSON, date or feedback from a forecast output."
+      "invalid_inputs": "Invalid source, history date or forecast output selected as input."
     }
   }
 }

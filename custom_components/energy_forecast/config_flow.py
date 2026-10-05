@@ -1,5 +1,3 @@
-import json
-
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.components.recorder import get_instance, statistics
@@ -87,7 +85,9 @@ class EnergyForecastOptions(config_entries.OptionsFlow):
         errors = {}
         if user_input is not None:
             try:
-                values = validate_inputs(json.loads(user_input["inputs"]), output_ids(self.hass))
+                values = validate_inputs(
+                    self.config_entry.options.get("inputs", []), output_ids(self.hass)
+                )
                 from datetime import datetime
 
                 datetime.fromisoformat(user_input["history_start"])
@@ -101,9 +101,6 @@ class EnergyForecastOptions(config_entries.OptionsFlow):
         defaults = self.config_entry.options
         schema = vol.Schema(
             {
-                vol.Required(
-                    "inputs", default=json.dumps(defaults.get("inputs", []), indent=2)
-                ): str,
                 vol.Required(
                     "history_start", default=defaults.get("history_start", "2022-01-01")
                 ): str,

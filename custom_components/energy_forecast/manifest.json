@@ -1,7 +1,7 @@
 {
   "domain": "energy_forecast",
   "name": "Energy Forecast",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "codeowners": ["@funkmaster-dan"],
   "config_flow": true,
   "documentation": "https://github.com/funkmaster-dan/ha-energy-forecast",

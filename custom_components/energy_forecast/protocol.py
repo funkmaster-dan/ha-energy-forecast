@@ -107,7 +107,7 @@ def validate_inputs(values, output_entities=()):
         if (
             value["unit"] not in UNITS
             or value["kind"] not in ("mean_power", "interval_energy", "counter", "state")
-            or value["boundary"] not in ("AC", "DC", "stored", "environment")
+            or value["boundary"] not in ("AC", "DC", "stored", "environment", "unknown")
         ):
             raise ValueError("Unsupported unit, kind or boundary")
         if value["kind"] == "mean_power" and value["unit"] not in ("W", "kW"):
@@ -153,4 +153,39 @@ def statistics_observations(mapping, rows, period="hour"):
                 "provenance": "statistics",
             }
         )
+    return result
+
+
+def sensor_contexts(source, name, unit, device_class=None):
+    import re
+
+    text = (source + " " + name).lower().replace("_", " ")
+    if re.search(
+        r"nominal|rated|installed capacity|maximum capacity|maximum battery|forecast|prediction|setpoint|limit",
+        text,
+    ):
+        return []
+    result = []
+    label = name.lower().replace("_", " ")
+    household_label = bool(re.search(r"household|home load|home consumption", label))
+    pv_label = bool(re.search(r"pv|solar|generation|yield", label))
+    if unit in ("W", "kW", "Wh", "kWh"):
+        if pv_label or (not household_label and re.search(r"pv|solar|generation|yield", text)):
+            result.append("pv_generation")
+        if (
+            not pv_label
+            and re.search(
+                r"household|home load|home consumption|load power|instantaneous load|total load|consumption",
+                text,
+            )
+            and not re.search(r"battery charge|grid import|grid export|grid to", text)
+        ):
+            result.append("household_load")
+        if not result and device_class in ("power", "energy"):
+            result.append("power_energy_other")
+    if unit == "%" and (
+        re.search(r"\bsoc\b|state of charge", text)
+        or (device_class == "battery" and re.search(r"storage|inverter|ess", text))
+    ):
+        result.append("battery_soc")
     return result

@@ -17,6 +17,7 @@ from .protocol import (
     UNITS,
     compatible_units,
     is_output,
+    sensor_contexts,
     statistics_observations,
     timestamp,
     value_or_none,
@@ -35,6 +36,8 @@ class Bridge:
         self.last_values = {}
         self.last_reported = {}
         self.last_error = None
+        self.remote_inputs = None
+        self.metadata_at = None
 
     async def load(self):
         self.state = await self.storage.async_load() or self.state
@@ -57,10 +60,86 @@ class Bridge:
         }
         return [
             m
-            for m in self.entry.options.get("inputs", [])
+            for m in (
+                self.remote_inputs
+                if self.remote_inputs is not None
+                else self.entry.options.get("inputs", [])
+            )
             if not is_output(m["source"], outputs)
             and not is_output(m.get("entity_id", ""), outputs)
         ]
+
+    async def publish_metadata(self):
+        outputs = {
+            e.entity_id for e in er.async_get(self.hass).entities.values() if e.platform == DOMAIN
+        }
+        sources = {}
+        for entity in self.hass.states.async_all("sensor"):
+            unit = entity.attributes.get("unit_of_measurement")
+            if is_output(entity.entity_id, outputs) or unit not in UNITS:
+                continue
+            if unit in ("Wh", "kWh") and entity.attributes.get("state_class") not in (
+                "total",
+                "total_increasing",
+            ):
+                continue
+            sources[entity.entity_id] = {
+                "source": entity.entity_id,
+                "name": entity.name,
+                "unit": unit,
+                "kind": "mean_power"
+                if unit in ("W", "kW")
+                else "counter"
+                if unit in ("Wh", "kWh")
+                else "state",
+                "inactive": False,
+                "device_class": entity.attributes.get("device_class"),
+                "state_class": entity.attributes.get("state_class"),
+            }
+        metadata = await get_instance(self.hass).async_add_executor_job(
+            partial(statistics.list_statistic_ids, self.hass)
+        )
+        for source in metadata:
+            identifier = source["statistic_id"]
+            unit = source.get("unit_of_measurement")
+            if (
+                identifier not in sources
+                and unit in UNITS
+                and not is_output(identifier, outputs)
+                and (unit not in ("Wh", "kWh") or source.get("has_sum"))
+            ):
+                sources[identifier] = {
+                    "source": identifier,
+                    "name": source.get("name") or identifier,
+                    "unit": unit,
+                    "kind": "mean_power"
+                    if unit in ("W", "kW")
+                    else "counter"
+                    if unit in ("Wh", "kWh")
+                    else "state",
+                    "inactive": True,
+                }
+        for metadata in sources.values():
+            metadata["contexts"] = sensor_contexts(
+                metadata["source"], metadata["name"], metadata["unit"], metadata.get("device_class")
+            )
+        from homeassistant.const import __version__
+
+        await self.client.request(
+            "POST",
+            "/bridge/metadata",
+            {
+                "home": {
+                    "name": self.hass.config.location_name,
+                    "latitude": self.hass.config.latitude,
+                    "longitude": self.hass.config.longitude,
+                    "timezone": self.hass.config.time_zone,
+                },
+                "sources": list(sources.values()),
+                "ha_version": __version__,
+            },
+        )
+        self.metadata_at = dt_util.utcnow()
 
     async def send(self, observations, checkpoint=None):
         if not observations:
@@ -93,6 +172,20 @@ class Bridge:
             return
         async with self.lock:
             try:
+                if (
+                    not self.metadata_at
+                    or (dt_util.utcnow() - self.metadata_at).total_seconds() >= 300
+                ):
+                    await self.publish_metadata()
+                selected = await self.client.request("GET", "/bridge/inputs")
+                from .protocol import validate_inputs
+
+                chosen = validate_inputs(selected) or self.entry.options.get("inputs", [])
+                if chosen != self.remote_inputs:
+                    self.remote_inputs = chosen
+                    self.state["mapping_signature"] = hashlib.sha256(
+                        json.dumps(chosen, sort_keys=True).encode()
+                    ).hexdigest()
                 await self.retry_pending()
                 current = dt_util.utcnow()
                 start = self.last_poll or current - timedelta(seconds=INPUT_SECONDS)
