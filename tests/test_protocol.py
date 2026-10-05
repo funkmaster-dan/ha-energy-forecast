@@ -69,3 +69,10 @@ def test_url_and_nonfinite_rejection():
             protocol.valid_url(url)
     assert protocol.value_or_none("unavailable") is None
     assert protocol.value_or_none("nan") is None
+
+
+def test_only_equivalent_energy_power_units_are_convertible():
+    assert protocol.compatible_units("W", "kW")
+    assert protocol.compatible_units("Wh", "kWh")
+    assert not protocol.compatible_units("%", "kWh")
+    assert not protocol.compatible_units("°C", "W")

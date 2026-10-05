@@ -3,7 +3,7 @@
   "api": "1.0",
   "sha256": {
     "forecast-v1.json": "0a2ebb21dbb3e709428853a6ecee1c75b46fe6431f6200ed34fed93bdb5e29eb",
-    "observations-v1.json": "f042b110f65a36c1af3c901ea92a95c277875eada43616651d7571282a4e1e18",
+    "observations-v1.json": "6aaca4751d2ec116dcc3210c074d344d855c0634758b479a4adbe6d129ef0f3d",
     "synthetic-forecast-v1.json": "2e0e8c07a914fd06b720c0075ce816acbd3827806118dae3a7344d912fa227ea"
   }
 }

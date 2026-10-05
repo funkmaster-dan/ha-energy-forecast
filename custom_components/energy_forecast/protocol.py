@@ -8,6 +8,10 @@ from urllib.parse import urlparse
 UNITS = {"W", "kW", "Wh", "kWh", "%", "°C", "W/m²"}
 
 
+def compatible_units(first, second):
+    return first == second or {first, second} <= {"W", "kW"} or {first, second} <= {"Wh", "kWh"}
+
+
 def timestamp(value):
     if isinstance(value, (int, float)):
         return datetime.fromtimestamp(value, timezone.utc)
@@ -145,7 +149,8 @@ def statistics_observations(mapping, rows, period="hour"):
                 "quality": "valid" if value is not None else "invalid",
                 "reasons": [] if value is not None else ["recorder_value_missing"],
                 "coverage": 1.0,
-                "revision": 0,
+                "revision": 1,
+                "provenance": "statistics",
             }
         )
     return result

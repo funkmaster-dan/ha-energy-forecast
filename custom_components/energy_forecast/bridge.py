@@ -13,7 +13,14 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, INPUT_SECONDS
-from .protocol import is_output, statistics_observations, timestamp, value_or_none
+from .protocol import (
+    UNITS,
+    compatible_units,
+    is_output,
+    statistics_observations,
+    timestamp,
+    value_or_none,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -109,8 +116,12 @@ class Bridge:
                         "valid" if value is not None and age <= INPUT_SECONDS * 2 else "invalid"
                     )
                     reasons = [] if quality == "valid" else ["source_stale_or_missing"]
-                    if state.attributes.get("unit_of_measurement") != mapping["unit"]:
-                        quality, reasons = "invalid", ["source_unit_changed"]
+                    reported_unit = state.attributes.get("unit_of_measurement")
+                    if not compatible_units(reported_unit, mapping["unit"]):
+                        quality, reasons = (
+                            "invalid",
+                            ["source_unit_changed", f"reported_unit:{str(reported_unit)[:32]}"],
+                        )
                     end = current
                     first = start
                     if mapping["kind"] == "state":
@@ -137,13 +148,14 @@ class Bridge:
                             "start": first.isoformat(),
                             "end": end.isoformat(),
                             "value": value,
-                            "unit": mapping["unit"],
+                            "unit": reported_unit if reported_unit in UNITS else mapping["unit"],
                             "kind": mapping["kind"],
                             "boundary": mapping["boundary"],
                             "quality": quality,
                             "reasons": reasons,
                             "coverage": 1.0,
                             "revision": 0,
+                            "provenance": "live",
                         }
                     )
                 await self.send(observations)
@@ -167,7 +179,7 @@ class Bridge:
             key = f"{mapping['source']}:{mapping['feature']}:{mapping['epoch']}:{period}"
             start = timestamp(self.state["checkpoints"].get(key, start_default.isoformat()))
             # Do not request incomplete current statistics or count future targets.
-            limit = current.replace(minute=0, second=0, microsecond=0)
+            limit = current.replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
             end = min(start + timedelta(days=1), limit)
             if end <= start:
                 continue
@@ -212,6 +224,7 @@ class Bridge:
                             else ["raw_gap_or_missing"],
                             "coverage": 1.0,
                             "revision": 0,
+                            "provenance": "raw_history",
                         }
                     )
                 # A bounded raw query that hit its cap must resume, never skip the remainder.
@@ -223,10 +236,19 @@ class Bridge:
                     partial(statistics.list_statistic_ids, self.hass, {mapping["source"]})
                 )
                 meta = next((m for m in metadata if m["statistic_id"] == mapping["source"]), None)
-                if meta and meta.get("unit_of_measurement") != mapping["unit"]:
+                if meta and not compatible_units(meta.get("unit_of_measurement"), mapping["unit"]):
                     raise ValueError(
                         "Statistic unit differs from selected source; review source epoch"
                     )
+                # Recorder converts the requested unit family; raw response units are explicit.
+                unit_family = (
+                    "power"
+                    if mapping["unit"] in ("W", "kW")
+                    else "energy"
+                    if mapping["unit"] in ("Wh", "kWh")
+                    else None
+                )
+                requested_units = {unit_family: mapping["unit"]} if unit_family else None
                 values = await recorder.async_add_executor_job(
                     partial(
                         statistics.statistics_during_period,
@@ -235,7 +257,7 @@ class Bridge:
                         end,
                         {mapping["source"]},
                         period,
-                        None,
+                        requested_units,
                         {"mean", "change"},
                     )
                 )
