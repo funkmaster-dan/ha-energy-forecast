@@ -13,7 +13,7 @@ The service's 0.3.0 alpha keeps discretionary export authorization disabled pend
 
 The HA machine cannot use the service host's `127.0.0.1` address. Use a trusted reachable LAN URL or HTTPS reverse proxy. Tokens are stored in the HA config entry and redacted from diagnostics. Reauthentication accepts a replacement token; unloading cancels forwarding/output timers, and options edits reload the entry.
 
-Tested in an isolated HA Core **2026.9.4** runtime. The actual household instance has not been commissioned. The HACS package requires 2026.9.4 or newer; compatibility should be rechecked on upgrades.
+Tested in an isolated HA Core **2026.9.4** runtime. The household integration has also been installed through HACS and paired: ten advisory entities publish live totals with guarded readiness, while ingestion remains in the service. The HACS package requires 2026.9.4 or newer; compatibility should be rechecked on upgrades.
 
 ## Source mappings
 
