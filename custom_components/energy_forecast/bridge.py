@@ -101,7 +101,11 @@ class Bridge:
         )
         for source in metadata:
             identifier = source["statistic_id"]
-            unit = source.get("unit_of_measurement")
+            unit = (
+                source.get("statistics_unit_of_measurement")
+                or source.get("unit_of_measurement")
+                or source.get("display_unit_of_measurement")
+            )
             if (
                 identifier not in sources
                 and unit in UNITS
@@ -177,6 +181,8 @@ class Bridge:
                     or (dt_util.utcnow() - self.metadata_at).total_seconds() >= 300
                 ):
                     await self.publish_metadata()
+                if (await self.client.diagnostics()).get("data_access") == "direct_api":
+                    return  # Optional integration publishes forecasts; service owns ingestion.
                 selected = await self.client.request("GET", "/bridge/inputs")
                 from .protocol import validate_inputs
 

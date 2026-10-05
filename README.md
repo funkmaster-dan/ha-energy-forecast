@@ -1,15 +1,15 @@
 # Energy Forecast for Home Assistant
 
-A HACS custom integration for the [Energy Forecast service](https://github.com/funkmaster-dan/energy-forecast). It forwards selected measured inputs and Recorder history, polls one atomic forecast snapshot, and publishes advisory sensors. Forecasting/training runs outside HA. **No battery controls are provided.**
+A HACS custom integration for the [Energy Forecast service](https://github.com/funkmaster-dan/energy-forecast). It polls one atomic forecast snapshot and publishes advisory sensors. Forecasting/training runs outside HA. **No battery controls are provided.**
 
-The service's 0.2.0 alpha keeps discretionary export authorization disabled pending source/parameter/tail validation. Forecast totals and shadow diagnostics are still useful. See the service's [delivery status](https://github.com/funkmaster-dan/energy-forecast/blob/main/docs/status.md).
+The service's 0.3.0 alpha keeps discretionary export authorization disabled pending source/parameter/tail validation. Forecast totals and shadow diagnostics are still useful. See the service's [delivery status](https://github.com/funkmaster-dan/energy-forecast/blob/main/docs/status.md).
 
 ## Installation and pairing
 
 1. In HACS → Custom repositories, add `https://github.com/funkmaster-dan/ha-energy-forecast` as type **Integration**. Download the alpha release and restart HA.
-2. Open **Setup** in the service GUI. Connect to HA with its URL and a long-lived access token; this imports home location and eligible sensor metadata and starts pairing automatically.
+2. Open **Setup** in the service GUI. Connect to HA with its URL and a long-lived access token; this imports home location and eligible sensor metadata and connects directly to HA. Pair this optional output integration manually with a scoped integration token created in the service.
 3. If automatic pairing is unavailable, add **Energy Forecast** under HA → Settings → Devices & services using the service URL, integration token shown in Setup, and site ID `home`.
-4. Select household, bank generation and battery SoC sensors in the service GUI. The bridge picks up these selections and publishes current sensors plus inactive Recorder IDs. Integration options control history and output settings through ordinary fields.
+4. Select household, bank generation and battery SoC sensors in the service GUI. The service reads them directly through HA’s APIs. This integration publishes advisory forecast entities; legacy input forwarding remains available when direct ingestion is not configured.
 
 The HA machine cannot use the service host's `127.0.0.1` address. Use a trusted reachable LAN URL or HTTPS reverse proxy. Tokens are stored in the HA config entry and redacted from diagnostics. Reauthentication accepts a replacement token; unloading cancels forwarding/output timers, and options edits reload the entry.
 
