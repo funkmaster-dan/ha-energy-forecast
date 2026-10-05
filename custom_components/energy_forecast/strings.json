@@ -1,0 +1,62 @@
+{
+  "title": "Energy Forecast",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect forecasting service",
+        "description": "Use the service's reachable LAN URL and a scoped integration token. Complete site configuration in the service GUI.",
+        "data": {
+          "url": "Service URL",
+          "token": "Integration token",
+          "site_id": "Site ID"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Replace pairing token",
+        "data": {
+          "token": "Integration token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect. Check URL, site ID, network and service availability.",
+      "invalid_auth": "The integration token was rejected."
+    },
+    "abort": {
+      "already_configured": "This service/site is already configured.",
+      "reauth_successful": "Authentication updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Select input sources and history",
+        "description": "Use the documented JSON mapping format, including explicit units, boundary and source epoch. Inactive statistic IDs are supported. Guide: {guide}",
+        "data": {
+          "inputs": "Selected inputs (JSON)",
+          "history_start": "History start (YYYY-MM-DD)",
+          "enable_backfill": "Backfill selected history",
+          "add_source": "Discover and add another source"
+        }
+      },
+      "discover": {
+        "title": "Select a measured source",
+        "description": "Recorder statistics include inactive historical IDs. Check units and AC/DC boundaries before selecting. Forecast output entities are excluded.",
+        "data": {
+          "source": "Entity / statistic ID",
+          "feature": "Logical feature",
+          "unit": "Unit",
+          "kind": "Measurement kind",
+          "boundary": "Measurement boundary",
+          "epoch": "Source epoch",
+          "history": "Backfill this source",
+          "history_period": "History resolution",
+          "interval_seconds": "Measured interval seconds (interval energy only)"
+        }
+      }
+    },
+    "error": {
+      "invalid_inputs": "Invalid mapping JSON, date or feedback from a forecast output."
+    }
+  }
+}

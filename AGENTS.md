@@ -1,0 +1,2 @@
+# Contributor instructions
+Keep this HACS bridge small. Only selected HA entities/statistics are forwarded. Use Recorder APIs, not database SQL. Exclude forecast output entities from inputs. Poll outputs through one coordinator; expire cached authorization locally even on communication failure. No battery actuation or model training. API v1 contracts are pinned in contracts/. Keep credentials and telemetry out of Git. Run `uv run ruff check .` and `uv run pytest`.

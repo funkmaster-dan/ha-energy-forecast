@@ -1,0 +1,17 @@
+[project]
+name = "ha-energy-forecast"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["aiohttp>=3.11,<4"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
