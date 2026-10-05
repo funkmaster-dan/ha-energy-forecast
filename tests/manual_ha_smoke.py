@@ -71,6 +71,7 @@ async def main():
     registry = er.async_get(hass)
     entities = [e for e in registry.entities.values() if e.platform == "energy_forecast"]
     assert len(entities) == 10, len(entities)
+    before_count = (await entry.runtime_data.client.diagnostics())["observations"]
     hass.states.async_set("sensor.demo_soc", "80", {"unit_of_measurement": "%"})
     bridge = entry.runtime_data.bridge
     # Configure the bridge directly in the isolated test entry, without touching a live HA.
@@ -92,7 +93,10 @@ async def main():
     )
     await hass.async_block_till_done()
     bridge = entry.runtime_data.bridge
+    while bridge.lock.locked():
+        await asyncio.sleep(0.05)
     await bridge.tick()
+    assert (await entry.runtime_data.client.diagnostics())["observations"] > before_count
     assert bridge.last_error is None, bridge.last_error
     print("Selected input forwarding:", "passed")
     options = await hass.config_entries.options.async_init(entry.entry_id)
